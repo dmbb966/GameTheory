@@ -9,7 +9,7 @@ using namespace std;
 Agent::Agent()
 {
 	this->id = Environment::NewAgentID();
-	this->personality = Environment::RandInt(Environment::PERSONALITY_TYPES);
+	this->personality = Environment::RandInt(Environment::personalityTypes);
 	this->currentTable = NULL;
 
 	if (Environment::D_CONSTRUCTORS)
@@ -17,19 +17,76 @@ Agent::Agent()
 				this->id, this->personality);
 }
 
+void Agent::SwapWith(Agent* a)
+{
+	if (this->currentTable == NULL)
+	{
+		if (a->currentTable == NULL) {
+			if (Environment::D_MOVETABLES)
+				printf ("Swapping agent %d with %d does nothing.  Both are unseated.\n", this->id, a->id);
+
+			return;
+		}
+		else {
+			TableObj* t = a->currentTable;
+			a->UnseatAgent();
+			t->AddToTable(this);
+
+			if (Environment::D_MOVETABLES)
+				printf ("Unseated agent %d has swapped with agent %d at table %d.\n", this->id, a->id, this->currentTable->id);
+		}
+	}
+
+	else if (a->currentTable == NULL) {
+		TableObj* t = this->currentTable;
+		this->UnseatAgent();
+		t->AddToTable(a);
+			if (Environment::D_MOVETABLES)
+				printf ("Agent %d at table %d has swapped with unseated agent %d.\n", this->id, a->currentTable->id, a->id);
+	}
+
+	else if (this->currentTable->id == a->currentTable->id){
+		if (Environment::D_MOVETABLES)
+			printf ("Swapping agent %d with %d does nothing.  Both are at the same table.\n", this->id, a->id);
+
+		return;
+	}
+
+	else
+	{
+		TableObj* t1 = this->currentTable;
+		TableObj* t2 = a->currentTable;
+
+		this->UnseatAgent();
+		a->UnseatAgent();
+
+		t1->AddToTable(a);
+		t2->AddToTable(this);
+
+		if (Environment::D_MOVETABLES)
+			printf ("Swapping Agent %d is now at table %d, while agent %d is now at table %d.\n", this->id, this->currentTable->id, a->id, a->currentTable->id);
+	}
+}
+
 void Agent::DisplayAgentInfo()
 {
-	printf ("Agent %d: Personality %d.  ", this->id, this->personality);
+	printf ("Agent %d, Personality %d, is", this->id, this->personality);
 	if (this->currentTable == NULL)
-		printf ("Not currently seated at a table.\n");
+		printf ("unseated.  Utility is 0.\n");
 	else
-		printf ("Currently seated at table %d\n", this->currentTable->id);
+	{
+		printf (" at table %d.  ", this->currentTable->id);
+		if (Environment::D_CALCUTIL)
+			printf ("\n");
+		this->DisplayAgentUtility();
+	}
+
 }
 
 void Agent::DisplayAgentUtility()
 {
-	printf ("Total utility for agent %d (personality %d) is: %d.  Normalized %0.3f\n",
-			this->id, this->personality, this->CalcUtilWith(), this->CalcUtilNorm());
+	printf ("Total utility is: %d, normalized to %0.3f\n",
+			this->CalcUtilWith(), this->CalcUtilNorm());
 }
 
 // Leaves the table and goes back to the ranks of the unsitted.
@@ -54,7 +111,7 @@ void Agent::SeatRandomly()
 	else
 	{
 		do {
-			int targetTable = Environment::RandInt(Environment::NUM_TABLES);
+			int targetTable = Environment::RandInt(Environment::allTables.size());
 			Environment::allTables.at(targetTable)->AddToTable(this);
 		} while (this->currentTable==NULL);
 	}
@@ -67,10 +124,11 @@ void Agent::SeatRandomly()
 int Agent::CalcUtilWith(TableObj* t)
 {
 	int result = 0;
-	int utilcalc = 0;
 
 	for (unsigned i = 0; i < t->AgentList.size(); i++)
 	{
+		int utilcalc = 0;
+
 		Agent* a = t->AgentList.at(i);
 
 		if (a->id == this->id) {
@@ -97,7 +155,7 @@ int Agent::CalcUtilWith(TableObj* t)
 // Returns utility of working with agent a
 int Agent::CalcUtilWith(Agent* a)
 {
-	return Environment::PERSONALITY_TYPES - abs(a->personality - this->personality);
+	return Environment::personalityTypes - abs(a->personality - this->personality) - Environment::lonerPreference;
 }
 
 // Returns utility of current table
@@ -106,10 +164,7 @@ int Agent::CalcUtilWith()
 	TableObj* t = this->currentTable;
 
 	if (t == NULL)
-	{
-		printf ("Agent %d is not seated!\n", this->id);
 		return 0;
-	}
 	else
 		return CalcUtilWith(t);
 }
@@ -117,12 +172,22 @@ int Agent::CalcUtilWith()
 // Calculates utility for current table, normalized for number of agents present
 double Agent::CalcUtilNorm()
 {
-	return double(CalcUtilWith()) / this->currentTable->numAtTable;
+	if (this->currentTable == NULL || this->currentTable->numAtTable <= 1)
+		return 0;
+	else
+		return double(CalcUtilWith()) / (this->currentTable->numAtTable - 1);
 }
 
 double Agent::CalcUtilNorm(TableObj* t)
 {
-	return double(CalcUtilWith(t)) / t->numAtTable;
+	if (this->currentTable->id == t->id)
+		if (t->numAtTable <= 1)
+			return 0.0;
+		else
+			return double(CalcUtilWith(t)) / (t->numAtTable - 1);
+	else
+		if (t->numAtTable < 1) return 0.0;
+		else return double(CalcUtilWith(t)) / (t->numAtTable);
 }
 
 
@@ -130,6 +195,12 @@ double Agent::CalcUtilNorm(TableObj* t)
 void Agent::FindBetterTable()
 {
 	int currentUtil = CalcUtilWith();
+
+	if (this->currentTable == NULL) {
+		if (Environment::seatOnStep) this->SeatRandomly();
+		if (this->currentTable == NULL) return;
+	}
+
 	int currentTableID = this->currentTable->id;
 
 	// Searches for any table with higher potential utility than current
@@ -142,13 +213,13 @@ void Agent::FindBetterTable()
 
 			if (comparisonUtil > currentUtil)
 			{
-				t->AddToTable(this);
-
 				if (Environment::D_SEARCHTABLES && comparisonUtil > currentUtil)
 				{
 					printf ("Agent %d can move from table %d to table %d.  ", this->id, currentTableID, t->id);
 					printf ("Will increase utility by %d\n", comparisonUtil - currentUtil);
 				}
+
+				t->AddToTable(this);
 
 				return;
 			}
@@ -159,6 +230,12 @@ void Agent::FindBetterTable()
 void Agent::FindBetterTableNorm()
 {
 	double currentUtil = CalcUtilNorm();
+
+	if (this->currentTable == NULL) {
+		if (Environment::seatOnStep) this->SeatRandomly();
+		if (this->currentTable == NULL) return;
+	}
+
 	int currentTableID = this->currentTable->id;
 
 
@@ -170,15 +247,19 @@ void Agent::FindBetterTableNorm()
 		{
 			double comparisonUtil = CalcUtilNorm(t);
 
+			if (Environment::D_CALCUTIL) {
+				printf ("Agent %d current utility at table is %0.3f versus table %d is %0.3f\n", this->id, currentUtil, t->id, comparisonUtil);
+			}
+
 			if (comparisonUtil > currentUtil)
 			{
-				t->AddToTable(this);
-
 				if (Environment::D_SEARCHTABLES && comparisonUtil > currentUtil)
 				{
 					printf ("Agent %d can move from table %d to table %d.  ", this->id, currentTableID, t->id);
 					printf ("Will increase utility by %0.3f\n", comparisonUtil - currentUtil);
 				}
+
+				t->AddToTable(this);
 
 				return;
 			}

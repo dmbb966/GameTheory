@@ -15,7 +15,6 @@ public:
 	TableObj* currentTable;	// Where he is currently seated
 
 	void DisplayAgentInfo();
-	void DisplayAgentUtility();
 	void UnseatAgent();
 	void SeatRandomly();
 
@@ -27,6 +26,12 @@ public:
 
 	void FindBetterTable();
 	void FindBetterTableNorm();
+
+	void SwapWith(Agent* a);		// Swaps places with agent a
+
+private:
+	void DisplayAgentUtility();
+
 
 
 	// TODO: Implement personality matrix for some randomization to compatibility

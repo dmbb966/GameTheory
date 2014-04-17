@@ -3,19 +3,31 @@
 
 int Environment::agentID;
 int Environment::tableID;
+int Environment::numAgents;
+int Environment::numTables;
+int Environment::personalityTypes;
+int Environment::tableCapacity;
+int Environment::lonerPreference;
+
+bool Environment::seatOnStep;
+bool Environment::initialized;
+
+bool Environment::D_CALCUTIL;
 std::vector<Agent*> Environment::allAgents;
 std::vector<TableObj*> Environment::allTables;
 
-void Environment::AddAgent(Agent* a)
+void Environment::AddAgent()
 {
+	Agent* a = new Agent();
 	allAgents.push_back(a);
 
 	if (D_ENVIRONMENT)
 		printf ("Pushed agent %d onto all agents list. Vector size is now %d\n", a->id, allAgents.size());
 }
 
-void Environment::AddTable(TableObj* t)
+void Environment::AddTable()
 {
+	TableObj* t = new TableObj();
 	allTables.push_back(t);
 
 	if (D_ENVIRONMENT)

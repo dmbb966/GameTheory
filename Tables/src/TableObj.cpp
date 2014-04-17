@@ -8,7 +8,7 @@ using namespace std;
 TableObj::TableObj()
 {
 	this->id = Environment::NewTableID();
-	this->capacity = Environment::TABLE_CAPACITY;
+	this->capacity = Environment::tableCapacity;
 	this->numAtTable = 0;
 
 	if (Environment::D_CONSTRUCTORS)
@@ -18,17 +18,23 @@ TableObj::TableObj()
 
 void TableObj::DisplayTableInfo()
 {
-	printf ("Table ID %d, with %d of %d people seated.\n", this->id, this->numAtTable, this->capacity);
+	printf ("Table ID %d, with %d of %d people seated.", this->id, this->numAtTable, this->capacity);
 
 	if (this->numAtTable > 0)
 	{
-		printf ("   Agent details follow: \n");
+		int tableUtility = 0;
+		for (unsigned i = 0; i < this->AgentList.size(); i++)
+			tableUtility += AgentList.at(i)->CalcUtilWith(this);
+		double tableUtilityNorm = double(tableUtility) / this->numAtTable;
+
+		printf ("  Table utility: %d, normalized to %0.3f: \n", tableUtility, tableUtilityNorm);
 		for (unsigned i = 0; i < this->AgentList.size(); i++)
 		{
 			printf ("   ");
-			this->AgentList.at(i)->DisplayAgentUtility();
+			this->AgentList.at(i)->DisplayAgentInfo();
 		}
 	}
+	else printf ("\n");
 
 
 }
@@ -40,8 +46,8 @@ void TableObj::AddToTable(Agent* newArrival)
 	{
 		if (newArrival->currentTable != NULL)
 		{
-			if (Environment::D_MOVETABLES)
-				printf ("Agent %d is currently seated.  Unseating agent.\n", this->id);
+			//if (Environment::D_MOVETABLES)
+			//	printf ("Agent %d is currently seated.  Unseating agent.\n", newArrival->id);
 			newArrival->UnseatAgent();
 		}
 
@@ -50,7 +56,7 @@ void TableObj::AddToTable(Agent* newArrival)
 		this->numAtTable++;
 
 		if (Environment::D_MOVETABLES)
-			printf ("Adding agent %d to table %d, which now has %d of %d people seated.\n",
+			printf ("Agent %d is now at table %d (%d of %d people seated)\n",
 					newArrival->id, this->id, this->numAtTable, this->capacity);
 	}
 	else
@@ -67,9 +73,10 @@ void TableObj::RemoveFromTable(Agent* departed)
 		{
 			this->AgentList.erase(this->AgentList.begin() + i);
 			this->numAtTable--;
+			departed->currentTable = NULL;
 
-			if (Environment::D_MOVETABLES)
-				printf ("Successfully removed agent %d from table %d\n", departed->id, this->id);
+			//if (Environment::D_MOVETABLES)
+			//	printf ("Successfully removed agent %d from table %d\n", departed->id, this->id);
 
 			return;
 		}

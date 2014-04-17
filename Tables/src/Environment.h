@@ -13,21 +13,29 @@ public:
 	static int tableID;
 	static int agentID;
 
+	static int numAgents;
+	static int numTables;
+	static int personalityTypes;
+	static int tableCapacity;
+	static int lonerPreference;
+
+	static bool seatOnStep;
+	static bool initialized;
+
+	static bool D_CALCUTIL;
+
 	static int CalcSocialUtility();	// Sums utility for all agents
 	static double CalcSocialUtilityNorm();	// Normalized value for social utility
 	static int NewAgentID();		// Returns a new agent ID number
 	static int NewTableID();		// Returns a new table ID number
 	static int RandInt(int x);		// Returns random integer from 0 to x
 
-	static void AddAgent(Agent* a);
-	static void AddTable(TableObj* t);
+	static void AddAgent();
+	static void AddTable();
 
 	static int EnvOpenSeats();
 
-	static const int NUM_AGENTS = 20;
-	static const int NUM_TABLES = 5;
-	static const int PERSONALITY_TYPES = 10;
-	static const int TABLE_CAPACITY = 10;
+	static void Initialize();
 
 	static const bool USE_NORMALIZED_UTILITY = true;
 	static const bool ALLOW_SWAPS = false;		// NOT implemented yet
@@ -37,7 +45,6 @@ public:
 	static const bool D_ENVIRONMENT = false;
 	static const bool D_SEARCHTABLES = true;
 	static const bool D_MOVETABLES = true;
-	static const bool D_CALCUTIL = false;
 };
 
 #endif /* ENVIRONMENT_H_ */
