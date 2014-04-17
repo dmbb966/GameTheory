@@ -283,12 +283,13 @@ int main()
 			printf ("seat all          - seats all agents randomly at the tables.\n");
 			printf ("set agents #      - sets # of agents to spawn\n");
 			printf ("set capacity #    - sets table capacity on spawn\n");
-			printf ("set loner #       - sets loner preference.  Utility goes negative if #PersTypes - abs(diff in personality)\n"
-					"                    exceeds this threshold, whereas sitting alone gives utility 0\n");
+			printf ("set loner #       - sets loner preference.  Utility goes negative if \n"
+					"                    #PersTypes - abs(diff in personality) exceeds this\n"
+					"                    threshold, whereas sitting alone gives utility 0\n");
 			printf ("set tables #      - sets # of tables to spawn\n");
 			printf ("social            - shows total utility of entire system.\n");
 			printf ("start             - creates tables and agents based on environment settings.\n");
-			printf ("step              - each agent sequentially sees if he can move to a better table.\n");
+			printf ("step              - each agent sequentially sees if there is a better table.\n");
 			printf ("step #            - as 'step' but iterates # times.\n");
 			printf ("step agent #      - agent # will move to a better table if possible.\n");
 			printf ("swap # #          - swap two agents (only works if at separate tables)\n");
