@@ -16,6 +16,27 @@ TableObj::TableObj()
 				this->id, this->capacity);
 }
 
+TableObj::TableObj(int capacity)
+{
+	this->id = Environment::NewTableID();
+	if (capacity <= 0) {
+		printf ("ERROR: Specified capacity %d is less than 1!\n", capacity);
+		printf ("Setting table capacity to default.\n");
+
+		this->capacity = Environment::tableCapacity;
+	}
+	else {
+		this->capacity = capacity;
+	}
+
+	this->numAtTable = 0;
+
+	if (Environment::D_CONSTRUCTORS)
+		printf ("Adding new empty table, ID %d and capacity %d.\n",
+			this->id, this->capacity);
+
+}
+
 void TableObj::DisplayTableInfo()
 {
 	printf ("Table ID %d, with %d of %d people seated.", this->id, this->numAtTable, this->capacity);

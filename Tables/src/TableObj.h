@@ -9,6 +9,7 @@ class Agent;
 class TableObj {
 public:
 	TableObj();
+	TableObj(int capacity);
 
 	int id;				// unique ID number for the table
 	int capacity;		// max number of agents at a table

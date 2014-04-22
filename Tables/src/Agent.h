@@ -8,6 +8,7 @@ class TableObj;
 class Agent {
 public:
 	Agent();
+	Agent(int personality);
 
 	int id;				// Unique agent ID
 	int personality;	// Personality code - used to compute compatibility

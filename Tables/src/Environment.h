@@ -31,7 +31,9 @@ public:
 	static int RandInt(int x);		// Returns random integer from 0 to x
 
 	static void AddAgent();
+	static void AddAgent(int personality);
 	static void AddTable();
+	static void AddTable(int capacity);
 
 	static int EnvOpenSeats();
 

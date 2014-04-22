@@ -75,6 +75,7 @@ int main()
 	DisplaySettings();
 
 	printf ("Type 'start' to initialize environment with the above conditions.\n");
+	printf ("Otherwise, you must add at least one table and one agent to begin.\n");
 	printf ("Type 'seat all' to randomly seat agents at tables.\n");
 	printf ("Type 'step' to progress the simulation.\n\n");
 	printf ("Type 'help' for all commands.\n");
@@ -131,6 +132,51 @@ int main()
 			printf ("New environment initialized.\n");
 		}
 
+		else if (arg == "ADD" && argc == 3) {
+			arg = PopReturnUpper(&commands);
+
+			if (arg == "AGENT") {
+				arg = PopReturnUpper(&commands);
+				int number;
+				if (!(istringstream(arg) >> number)) number = -1;
+
+				if (number < 0 || number >= Environment::personalityTypes) {
+					printf ("ERROR: Personality type must range between 0 and %d\n", Environment::personalityTypes - 1);
+				}
+				else {
+					Environment::AddAgent(number);
+					printf ("New agent added with personality %d\n", number);
+					if (Environment::tableID > 0 && Environment::agentID > 0 && !Environment::initialized)
+					{
+						Environment::initialized = true;
+						printf("The environment is now considered initialized.\n");
+					}
+				}
+			}
+			else if (arg == "TABLE") {
+				arg = PopReturnUpper(&commands);
+				int number;
+				if (!(istringstream(arg) >> number)) number = -1;
+
+				if (number < 0) {
+					printf ("ERROR: Table capacity must be at least 1.\n");
+				}
+				else {
+					Environment::AddTable(number);
+					printf ("New table added with capacity %d\n", number);
+
+					printf ("New agent added with personality %d\n", number);
+					if (Environment::tableID > 0 && Environment::agentID > 0 && !Environment::initialized)
+					{
+						Environment::initialized = true;
+						printf("The environment is now considered initialized.\n");
+					}
+				}
+			}
+			else
+				EnvironmentError();
+		}
+
 		else if (arg == "TOGGLE" && argc == 2) {
 			arg = PopReturnUpper(&commands);
 
@@ -145,7 +191,7 @@ int main()
 			}
 
 			else
-				EnvironmentError();
+				InterpretError();
 		}
 
 		else if (arg == "SET" && argc == 3) {
@@ -271,6 +317,8 @@ int main()
 
 		else if (arg == "HELP") {
 			printf ("Available commands: \n");
+			printf ("add agent #       - adds a new agent with personality #.\n");
+			printf ("add table #       - adds a new table with capacity #.\n");
 			printf ("display agent #   - displays info for a given agent.\n");
 			printf ("display agents    - displays info for all agents.\n");
 			printf ("display table #   - displays info for a given table.\n");
@@ -304,7 +352,7 @@ int main()
 		// ------------------ All commands below require initialization
 		else if (!Environment::initialized)
 		{
-			InterpretError();
+			EnvironmentError();
 
 		}
 
@@ -463,19 +511,21 @@ int main()
 				int a;
 				if (!(istringstream(arg) >> a)) a = -1;
 
-				if (a < 0 || a > Environment::agentID) {
+				if (a < 0 || a >= Environment::agentID) {
 					InterpretError();
 				}
+				else {
 
-				Agent* g = Environment::allAgents.at(a);
+					Agent* g = Environment::allAgents.at(a);
 
-				if (g->currentTable == NULL)
-				{
-					printf ("Agent %d is already unseated!\n", g->id);
+					if (g->currentTable == NULL)
+					{
+						printf ("Agent %d is already unseated!\n", g->id);
+					}
+
+					g->UnseatAgent();
+					printf ("Agent %d has been unseated.\n", g->id);
 				}
-
-				g->UnseatAgent();
-				printf ("Agent %d has been unseated.\n", g->id);
 			}
 		}
 
@@ -488,34 +538,40 @@ int main()
 			arg = PopReturnUpper(&commands);
 			if (!(istringstream(arg) >> num)) num = -1;
 
-			if (num < 0 || num > Environment::agentID) {
+			if (num < 0 || num >= Environment::agentID) {
 				InterpretError();
-			}
-			a = Environment::allAgents.at(num);
-
-			arg = PopReturnUpper(&commands);
-			if (arg != "TO") {
-				InterpretError();
-			}
-
-			arg = PopReturnUpper(&commands);
-			if (!(istringstream(arg) >> num)) num = -1;
-
-			if (num < 0 || num > Environment::tableID) {
-				InterpretError();
-			}
-			t = Environment::allTables.at(num);
-
-			if (t->numAtTable >= t->capacity) {
-				printf ("ERROR: Table %d is already full!\n", t->id);
 			}
 			else {
-				if (a->currentTable != NULL)
-					a->UnseatAgent();
+				a = Environment::allAgents.at(num);
 
-				t->AddToTable(a);
+				arg = PopReturnUpper(&commands);
+				if (arg != "TO") {
+					InterpretError();
+				}
+				else {
 
-				printf ("Agent %d has been moved to table %d\n", a->id, a->currentTable->id);
+					arg = PopReturnUpper(&commands);
+					if (!(istringstream(arg) >> num)) num = -1;
+
+					if (num < 0 || num >= Environment::tableID) {
+						InterpretError();
+					}
+					else {
+						t = Environment::allTables.at(num);
+
+						if (t->numAtTable >= t->capacity) {
+							printf ("ERROR: Table %d is already full!\n", t->id);
+						}
+						else {
+							if (a->currentTable != NULL)
+								a->UnseatAgent();
+
+							t->AddToTable(a);
+
+							printf ("Agent %d has been moved to table %d\n", a->id, a->currentTable->id);
+						}
+					}
+				}
 			}
 		}
 

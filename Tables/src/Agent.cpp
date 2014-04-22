@@ -17,6 +17,24 @@ Agent::Agent()
 				this->id, this->personality);
 }
 
+Agent::Agent(int personality) {
+	this->id = Environment::NewAgentID();
+
+	if (personality < 0 || personality >= Environment::personalityTypes) {
+		printf ("ERROR: Cannot add agent with personality %d.  Range must be between 0 and %d\n", personality, Environment::personalityTypes - 1);
+		printf ("Adding agent with random personality type instead.\n");
+
+		this->personality = Environment::RandInt(Environment::personalityTypes);
+	}
+	else this->personality = personality;
+
+	this->currentTable = NULL;
+
+	if (Environment::D_CONSTRUCTORS)
+		printf ("Adding new agent, ID %d and personality %d.\n",
+		this->id, this->personality);
+}
+
 void Agent::SwapWith(Agent* a)
 {
 	if (this->currentTable == NULL)
@@ -72,7 +90,7 @@ void Agent::DisplayAgentInfo()
 {
 	printf ("Agent %d, Personality %d, is", this->id, this->personality);
 	if (this->currentTable == NULL)
-		printf ("unseated.  Utility is 0.\n");
+		printf (" unseated.  Utility is 0.\n");
 	else
 	{
 		printf (" at table %d.  ", this->currentTable->id);

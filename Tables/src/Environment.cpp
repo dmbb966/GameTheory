@@ -25,6 +25,20 @@ void Environment::AddAgent()
 		printf ("Pushed agent %d onto all agents list. Vector size is now %d\n", a->id, allAgents.size());
 }
 
+void Environment::AddAgent(int personality)
+{
+	if (personality < 0 || personality >= Environment::personalityTypes) {
+		printf ("ERROR: Cannot add agent with personality %d.  Range must be between 0 and %d\n", personality, Environment::personalityTypes - 1);
+	}
+	else {
+		Agent* a = new Agent(personality);
+		allAgents.push_back(a);
+
+		if (D_ENVIRONMENT)
+			printf ("Pushed agent %d onto all agents list. Vector size is now %d\n", a->id, allAgents.size());
+	}
+}
+
 void Environment::AddTable()
 {
 	TableObj* t = new TableObj();
@@ -32,6 +46,21 @@ void Environment::AddTable()
 
 	if (D_ENVIRONMENT)
 		printf ("Pushed table %d onto all tables list.  Vector size is now %d\n", t->id, allTables.size());
+}
+
+void Environment::AddTable(int capacity)
+{
+	if (capacity <= 0) {
+		printf ("ERROR: Cannot create a table with capacity %d.  Capacity must be at least 1.\n", capacity);
+	}
+	else
+	{
+		TableObj* t = new TableObj(capacity);
+		allTables.push_back(t);
+
+		if (D_ENVIRONMENT)
+			printf ("Pushed table %d onto all tables list.  Vector size is now %d\n", t->id, allTables.size());
+	}
 }
 
 // Sums utility for all agents
