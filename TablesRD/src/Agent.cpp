@@ -27,7 +27,6 @@ Agent::Agent(int personality) {
 		this->personality = Environment::RandInt(Environment::personalityTypes);
 	}
 	else this->personality = personality;
-
 	this->currentTable = NULL;
 
 	if (Environment::D_CONSTRUCTORS)

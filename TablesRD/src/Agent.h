@@ -3,6 +3,7 @@
 
 class TableObj;
 
+#include <vector>
 #include "TableObj.h"
 
 class Agent {
@@ -10,10 +11,16 @@ public:
 	Agent();
 	Agent(int personality);
 
-	int id;				// Unique agent ID
-	int personality;	// Personality code - used to compute compatibility
+	int id;								// Unique agent ID
+	//std::vector<Agent*> connections;	// Links to neighboring agents
 
 	TableObj* currentTable;	// Where he is currently seated
+
+
+	// Will remove personality
+	int personality;	// Personality code - used to compute compatibility
+
+
 
 	void DisplayAgentInfo();
 	void UnseatAgent();

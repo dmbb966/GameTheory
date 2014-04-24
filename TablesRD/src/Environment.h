@@ -1,9 +1,9 @@
 #ifndef ENVIRONMENT_H_
 #define ENVIRONMENT_H_
 
-#include <vector>
 #include "Agent.h"
 #include "TableObj.h"
+#include <vector>
 
 class Environment {
 public:

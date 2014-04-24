@@ -69,6 +69,7 @@ void TableObj::AddToTable(Agent* newArrival)
 		{
 			//if (Environment::D_MOVETABLES)
 			//	printf ("Agent %d is currently seated.  Unseating agent.\n", newArrival->id);
+
 			newArrival->UnseatAgent();
 		}
 
