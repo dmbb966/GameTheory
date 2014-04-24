@@ -112,7 +112,7 @@ int main()
 			runProgram = false;
 		}
 
-		else if (arg == "START" || arg == "RESET") {
+		else if (arg == "START" || arg == "RESET" || arg == "CLEAR") {
 			if (Environment::initialized) {
 				// Wipes out existing environment
 				Environment::allAgents.erase(Environment::allAgents.begin(), Environment::allAgents.begin() + Environment::allAgents.size());
@@ -123,13 +123,15 @@ int main()
 				printf ("Old environment erased.\n");
 			}
 
-			for (int j = 0; j < Environment::numAgents; j++)
-				Environment::AddAgent();
-			for (int j = 0; j < Environment::numTables; j++)
-				Environment::AddTable();
-			Environment::initialized = true;
+			if (arg != "CLEAR") {
+				for (int j = 0; j < Environment::numAgents; j++)
+					Environment::AddAgent();
+				for (int j = 0; j < Environment::numTables; j++)
+					Environment::AddTable();
+				Environment::initialized = true;
 
-			printf ("New environment initialized.\n");
+				printf ("New environment initialized.\n");
+			}
 		}
 
 		else if (arg == "ADD" && argc == 3) {
@@ -319,6 +321,7 @@ int main()
 			printf ("Available commands: \n");
 			printf ("add agent #       - adds a new agent with personality #.\n");
 			printf ("add table #       - adds a new table with capacity #.\n");
+			printf ("clear             - removes all agents and tables from the environment.\n");
 			printf ("display agent #   - displays info for a given agent.\n");
 			printf ("display agents    - displays info for all agents.\n");
 			printf ("display table #   - displays info for a given table.\n");
