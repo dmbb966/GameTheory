@@ -13,6 +13,8 @@ bool Environment::seatOnStep;
 bool Environment::initialized;
 
 bool Environment::D_CALCUTIL;
+bool Environment::SHOW_PARSE;
+bool Environment::ALLOW_SWAPS;
 std::vector<Agent*> Environment::allAgents;
 std::vector<TableObj*> Environment::allTables;
 
@@ -22,7 +24,7 @@ void Environment::AddAgent()
 	allAgents.push_back(a);
 
 	if (D_ENVIRONMENT)
-		printf ("Pushed agent %d onto all agents list. Vector size is now %d\n", a->id, allAgents.size());
+		printf ("Pushed agent %d onto all agents list. Vector size is now %lu\n", a->id, allAgents.size());
 }
 
 void Environment::AddAgent(int personality)
@@ -35,7 +37,7 @@ void Environment::AddAgent(int personality)
 		allAgents.push_back(a);
 
 		if (D_ENVIRONMENT)
-			printf ("Pushed agent %d onto all agents list. Vector size is now %d\n", a->id, allAgents.size());
+			printf ("Pushed agent %d onto all agents list. Vector size is now %lu\n", a->id, allAgents.size());
 	}
 }
 
@@ -45,7 +47,7 @@ void Environment::AddTable()
 	allTables.push_back(t);
 
 	if (D_ENVIRONMENT)
-		printf ("Pushed table %d onto all tables list.  Vector size is now %d\n", t->id, allTables.size());
+		printf ("Pushed table %d onto all tables list.  Vector size is now %lu\n", t->id, allTables.size());
 }
 
 void Environment::AddTable(int capacity)
@@ -59,7 +61,7 @@ void Environment::AddTable(int capacity)
 		allTables.push_back(t);
 
 		if (D_ENVIRONMENT)
-			printf ("Pushed table %d onto all tables list.  Vector size is now %d\n", t->id, allTables.size());
+			printf ("Pushed table %d onto all tables list.  Vector size is now %lu\n", t->id, allTables.size());
 	}
 }
 

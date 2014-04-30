@@ -7,17 +7,31 @@
 #include <list>
 
 #include "mtwist.h"
-#include "environment.h"
+#include "Environment.h"
 #include "Agent.h"
 #include "TableObj.h"
 
 using namespace std;
 
+string Upper(string a) {
+	string ret = a;
+	transform(ret.begin(), ret.end(), ret.begin(), ::toupper);
+	return ret;
+}
+
 string PopReturnUpper(list<string>* a)
 {
 	string ret = a->front();
+	ret = Upper(ret);
 	a->pop_front();
-	transform(ret.begin(), ret.end(), ret.begin(), ::toupper);
+
+	return ret;
+}
+
+string PopReturnNormal(list<string>* a)
+{
+	string ret = a->front();
+	a->pop_front();
 
 	return ret;
 }
@@ -52,6 +66,15 @@ void DisplaySettings()
 	printf ("Show detailed util calc: ");
 	if (Environment::D_CALCUTIL) printf ("TRUE\n");
 	else printf ("FALSE\n");
+
+	printf ("Show Parse on Load: ");
+	if (Environment::SHOW_PARSE) printf ("TRUE\n");
+	else printf ("FALSE\n");
+
+	printf ("Enable 1-for-1 Swaps: ");
+	if (bool Environment::ALLOW_SWAPS) printf ("TRUE\n");
+	else printf ("FALSE\n");
+
 	// printf ("Default personality types: %d\n", Environment::personalityTypes);
 	printf ("Table capacity: %d\n\n", Environment::tableCapacity);
 }
@@ -101,7 +124,7 @@ void AddTable(list<string> commands) {
 	string arg = PopReturnUpper(&commands);
 	int number = StrNum(arg);
 
-	if (number < 0) {
+	if (number <= 0) {
 		printf ("ERROR: Table capacity must be at least 1.\n");
 	}
 	else {
@@ -125,6 +148,11 @@ void ToggleSettings(list<string> commands) {
 
 	else if (arg == "UTILCALC") {
 		Environment::D_CALCUTIL = !Environment::D_CALCUTIL;
+		DisplaySettings();
+	}
+
+	else if (arg == "PARSE") {
+		Environment::SHOW_PARSE = !Environment::SHOW_PARSE;
 		DisplaySettings();
 	}
 
@@ -187,7 +215,7 @@ void EditAgent(list<string> commands) {
 	int number = StrNum(arg);
 
 	if (number < 0 || number >= int(Environment::allAgents.size()))
-		printf ("ERROR!  Agent # entered is out of range.  Valid range is between 0 and %d.\n", Environment::allAgents.size() - 1);
+		printf ("ERROR!  Agent # entered is out of range.  Valid range is between 0 and %lu.\n", Environment::allAgents.size() - 1);
 	else {
 		a = Environment::allAgents.at(number);
 
@@ -211,7 +239,7 @@ void EditTable(list<string> commands) {
 	int number = StrNum(arg);
 
 	if (number < 0 || number >= int(Environment::allTables.size()))
-		printf ("ERROR!  Table # entered is out of range.  Valid range is between 0 and %d.\n", Environment::allTables.size() - 1);
+		printf ("ERROR!  Table # entered is out of range.  Valid range is between 0 and %lu.\n", Environment::allTables.size() - 1);
 	else {
 		t = Environment::allTables.at(number);
 
@@ -241,6 +269,7 @@ void DisplayHelp() {
 	printf ("edit agent # X    - changes personality of agent # to X.\n");
 	printf ("edit table # X    - changes capacity of table # to X.\n");
 	printf ("exit || quit      - ends the program.\n");
+	printf ("load <filename>   - loads a particular filename as the environment.\n");
 	printf ("move # to #       - moves an agent to the specified table.\n");
 	printf ("reset             - same as 'start' - replaces existing environment.\n");
 	printf ("seat all          - seats all agents randomly at the tables.\n");
@@ -257,6 +286,7 @@ void DisplayHelp() {
 	printf ("step agent #      - agent # will move to a better table if possible.\n");
 	printf ("swap # #          - swap two agents (only works if at separate tables)\n");
 	printf ("toggle autoseat   - unseated agents will try to find a random seat on 'step'\n");
+	printf ("toggle parse      - shows parse details when loading environment file.\n");
 	printf ("toggle utilcalc   - detailed output for utility calculations.\n");
 	printf ("unseat #          - removes agent # from his table.\n");
 	printf ("unseat all        - removes all agents from tables.\n");
@@ -378,10 +408,178 @@ void UnseatAgent(list<string> commands) {
 	}
 }
 
+
+
+void SeatAgent(list<string> commands, Agent* a) {
+	string arg = PopReturnUpper(&commands);
+	int num = StrNum(arg);
+
+	if (num < 0 || num >= Environment::tableID)
+		InterpretError();
+	else {
+		TableObj* t = Environment::allTables.at(num);
+
+		if (t->numAtTable >= t->capacity) {
+			printf ("ERROR: Table %d is already full!\n", t->id);
+		}
+		else {
+			if (a->currentTable != NULL)
+			{
+				a->UnseatAgent();
+			}
+
+			t->AddToTable(a);
+
+			printf ("Agent %d has been moved to table %d\n", a->id, a->currentTable->id);
+		}
+	}
+}
+
+
+// Reads a data file and loads it as the environment
+void LoadEnvironment(list<string> commands) {
+	string arg = PopReturnNormal(&commands);
+	const char *filename = arg.c_str();
+	bool LoadTables = false;
+	bool LoadAgents = false;
+	bool isNum = false;
+
+	printf ("File name selected: ");
+	cout << arg << "\n";
+
+	ifstream efile;
+	efile.open(filename, ios::in);
+
+	string buffer;
+	list<string> fcommand;
+
+	if (efile.is_open()) {
+		int lineNumber = 0;
+		while (getline(efile, buffer)) {
+			lineNumber++;
+
+			if (buffer.size() == 0) continue;
+			else if (buffer.at(0) == ';') {
+				if (Environment::SHOW_PARSE) {
+					printf ("COMMENT Line %d: ", lineNumber);
+					cout << buffer << "\n";
+				}
+
+				continue;
+			}
+			// Parse input
+			else {
+				for (unsigned cursor = 0; cursor < buffer.length();)
+				{
+					char c = buffer.at(cursor);
+
+					if (c == 32)
+						cursor++;
+					else {
+						int jumpto = buffer.find(' ', cursor);
+						if (jumpto == -1) jumpto = buffer.length();
+
+						string arg = buffer.substr(cursor, jumpto - cursor);
+						fcommand.push_back(arg);
+
+						cursor = jumpto;
+					}
+				}
+			}
+
+			if (Environment::SHOW_PARSE) cout << "Line " << lineNumber << ": " << buffer << "\n";
+			char c = fcommand.front().at(0);
+			if (c >= '0' && c <= '9') isNum = true;
+			else isNum = false;
+
+			for (unsigned i = 0; i <= fcommand.size(); i++) {
+
+				if (isNum)
+				{
+					if (LoadAgents) {
+						AddAgent(fcommand);
+						fcommand.pop_front();
+						if (fcommand.size() == 1) {
+							Agent* a = Environment::allAgents.back();
+							SeatAgent(fcommand, a);
+							fcommand.pop_front();
+						}
+						continue;
+					}
+					else if (LoadTables) {
+						AddTable(fcommand);
+						fcommand.clear();
+						break;
+					}
+				}
+				string arg = PopReturnNormal(&fcommand);
+				// if (SHOW_PARSE) cout << "/" << arg << "/ ";
+
+				if (Upper(arg) == "TABLES")
+				{
+					if (LoadTables || LoadAgents)
+					{
+						printf ("ERROR reading line %d: Either Tables or Agents are already loading!\n", lineNumber);
+						printf ("Aborting load and cleaning environment.\n");
+						ClearEnvironment();
+						return;
+					}
+					else if (!LoadTables)
+					{
+						printf ("Now loading tables from file.\n");
+						LoadTables = true;
+					}
+				}
+
+				else if (Upper(arg) == "ENDTABLES") {
+					if (!LoadTables || LoadAgents) {
+						printf ("ERROR reading line %d: Either tables are not loading or agents are already loading!\n", lineNumber);
+						printf ("Aborting load and cleaning environment.\n");
+						ClearEnvironment();
+						return;
+					} else if (LoadTables) {
+						printf ("Tables are finished loading from file.\n");
+						LoadTables = false;
+					}
+				}
+
+				if (Upper(arg) == "AGENTS")
+				{
+					if (LoadTables || LoadAgents)
+					{
+						printf ("ERROR reading line %d: Either Tables or Agents are already loading!\n", lineNumber);
+						printf ("Aborting load and cleaning environment.\n");
+						ClearEnvironment();
+						return;
+					} else if (!LoadAgents)
+					{
+						printf ("Now loading agents from file.\n");
+						LoadAgents = true;
+					}
+				}
+
+				else if (Upper(arg) == "ENDAGENTS") {
+					if (!LoadAgents || LoadTables) {
+						printf ("ERROR reading line %d: Either tables are not loading or agents are already loading!\n", lineNumber);
+						printf ("Aborting load and cleaning environment.\n");
+						ClearEnvironment();
+						return;
+					} else if (LoadAgents) {
+						printf ("Agents are finished loading from file.\n");
+						LoadAgents = false;
+					}
+				}
+
+			}
+		}
+
+	}
+	else printf ("ERROR: File did not load properly.\n");
+}
+
 void MoveAgent(list<string> commands) {
 	int num;
 	Agent* a;
-	TableObj* t;
 	string arg = PopReturnUpper(&commands);
 	num = StrNum(arg);
 
@@ -398,29 +596,7 @@ void MoveAgent(list<string> commands) {
 			InterpretError();
 		}
 		else {
-
-			arg = PopReturnUpper(&commands);
-			num = StrNum(arg);
-
-			if (num < 0 || num >= Environment::tableID)
-				InterpretError();
-			else {
-				t = Environment::allTables.at(num);
-
-				if (t->numAtTable >= t->capacity) {
-					printf ("ERROR: Table %d is already full!\n", t->id);
-				}
-				else {
-					if (a->currentTable != NULL)
-					{
-						a->UnseatAgent();
-					}
-
-					t->AddToTable(a);
-
-					printf ("Agent %d has been moved to table %d\n", a->id, a->currentTable->id);
-				}
-			}
+			SeatAgent(commands, a);
 		}
 	}
 }
@@ -446,6 +622,7 @@ int main()
 	Environment::seatOnStep = false;
 	Environment::initialized = false;
 	Environment::D_CALCUTIL = false;
+	Environment::SHOW_PARSE = false;
 
 	if (Environment::D_CONSTRUCTORS)
 		printf ("Environment initialized with starting table ID %d and starting agent ID %d\n", Environment::tableID, Environment::agentID);
@@ -468,7 +645,9 @@ int main()
 	{
 		list<string> commands;
 		printf ("\n>");
+
 		getline (cin, buffer);
+
 
 		// Parses input
 		for (unsigned cursor = 0; cursor < buffer.length();)
@@ -489,6 +668,7 @@ int main()
 		}
 
 		unsigned argc = commands.size();
+		if (argc == 0) continue;
 		string arg = PopReturnUpper(&commands);
 
 		if (arg == "EXIT" || arg == "QUIT") {
@@ -529,6 +709,13 @@ int main()
 		}
 
 		else if (arg == "HELP") DisplayHelp();
+
+		else if (arg == "LOAD" && argc == 2) {
+			if (Environment::initialized) {
+				printf ("ERROR: Environment already initialized!  You must clear the current environment first.\n");
+			} else
+				LoadEnvironment(commands);
+		}
 
 		// ------------------ All commands below require initialization
 		else if (!Environment::initialized)
