@@ -40,7 +40,8 @@ public:
 	static void Initialize();
 
 	static const bool USE_NORMALIZED_UTILITY = true;
-	static const bool ALLOW_SWAPS = false;		// NOT implemented yet
+	static bool ALLOW_SWAPS;		// NOT implemented yet
+	static bool SHOW_PARSE;
 
 	// Boolean switches for debug
 	static const bool D_CONSTRUCTORS = false;

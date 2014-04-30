@@ -66,6 +66,15 @@ void DisplaySettings()
 	printf ("Show detailed util calc: ");
 	if (Environment::D_CALCUTIL) printf ("TRUE\n");
 	else printf ("FALSE\n");
+
+	printf ("Show Parse on Load: ");
+	if (Environment::SHOW_PARSE) printf ("TRUE\n");
+	else printf ("FALSE\n");
+
+	printf ("Enable 1-for-1 Swaps: ");
+	if (bool Environment::ALLOW_SWAPS) printf ("TRUE\n");
+	else printf ("FALSE\n");
+
 	// printf ("Default personality types: %d\n", Environment::personalityTypes);
 	printf ("Table capacity: %d\n\n", Environment::tableCapacity);
 }
@@ -115,7 +124,7 @@ void AddTable(list<string> commands) {
 	string arg = PopReturnUpper(&commands);
 	int number = StrNum(arg);
 
-	if (number < 0) {
+	if (number <= 0) {
 		printf ("ERROR: Table capacity must be at least 1.\n");
 	}
 	else {
@@ -139,6 +148,11 @@ void ToggleSettings(list<string> commands) {
 
 	else if (arg == "UTILCALC") {
 		Environment::D_CALCUTIL = !Environment::D_CALCUTIL;
+		DisplaySettings();
+	}
+
+	else if (arg == "PARSE") {
+		Environment::SHOW_PARSE = !Environment::SHOW_PARSE;
 		DisplaySettings();
 	}
 
@@ -272,6 +286,7 @@ void DisplayHelp() {
 	printf ("step agent #      - agent # will move to a better table if possible.\n");
 	printf ("swap # #          - swap two agents (only works if at separate tables)\n");
 	printf ("toggle autoseat   - unseated agents will try to find a random seat on 'step'\n");
+	printf ("toggle parse      - shows parse details when loading environment file.\n");
 	printf ("toggle utilcalc   - detailed output for utility calculations.\n");
 	printf ("unseat #          - removes agent # from his table.\n");
 	printf ("unseat all        - removes all agents from tables.\n");
@@ -425,10 +440,9 @@ void SeatAgent(list<string> commands, Agent* a) {
 void LoadEnvironment(list<string> commands) {
 	string arg = PopReturnNormal(&commands);
 	const char *filename = arg.c_str();
-	const bool SHOW_PARSE = true;
 	bool LoadTables = false;
 	bool LoadAgents = false;
-	bool NewAgent = false;
+	bool isNum = false;
 
 	printf ("File name selected: ");
 	cout << arg << "\n";
@@ -446,7 +460,7 @@ void LoadEnvironment(list<string> commands) {
 
 			if (buffer.size() == 0) continue;
 			else if (buffer.at(0) == ';') {
-				if (SHOW_PARSE) {
+				if (Environment::SHOW_PARSE) {
 					printf ("COMMENT Line %d: ", lineNumber);
 					cout << buffer << "\n";
 				}
@@ -473,24 +487,33 @@ void LoadEnvironment(list<string> commands) {
 				}
 			}
 
-			if (SHOW_PARSE) cout << "Line " << lineNumber << ": " << buffer;
-			//FIXME
+			if (Environment::SHOW_PARSE) cout << "Line " << lineNumber << ": " << buffer << "\n";
+			char c = fcommand.front().at(0);
+			if (c >= '0' && c <= '9') isNum = true;
+			else isNum = false;
+
 			for (unsigned i = 0; i <= fcommand.size(); i++) {
-				if (LoadAgents && !NewAgent) {
-					AddAgent(fcommand);
-					NewAgent = true;
-					continue;
-				} else if (LoadAgents && NewAgent) {
-					Agent* a = Environment::allAgents.back();
-					SeatAgent(fcommand, a);
-					break;
-				}
-				else if (LoadTables) {
-					AddTable(fcommand);
-					break;
+
+				if (isNum)
+				{
+					if (LoadAgents) {
+						AddAgent(fcommand);
+						fcommand.pop_front();
+						if (fcommand.size() == 1) {
+							Agent* a = Environment::allAgents.back();
+							SeatAgent(fcommand, a);
+							fcommand.pop_front();
+						}
+						continue;
+					}
+					else if (LoadTables) {
+						AddTable(fcommand);
+						fcommand.clear();
+						break;
+					}
 				}
 				string arg = PopReturnNormal(&fcommand);
-				if (SHOW_PARSE) cout << "/" << arg << "/ ";
+				// if (SHOW_PARSE) cout << "/" << arg << "/ ";
 
 				if (Upper(arg) == "TABLES")
 				{
@@ -548,8 +571,6 @@ void LoadEnvironment(list<string> commands) {
 				}
 
 			}
-			NewAgent = false;
-			printf ("\n");
 		}
 
 	}
@@ -601,6 +622,7 @@ int main()
 	Environment::seatOnStep = false;
 	Environment::initialized = false;
 	Environment::D_CALCUTIL = false;
+	Environment::SHOW_PARSE = false;
 
 	if (Environment::D_CONSTRUCTORS)
 		printf ("Environment initialized with starting table ID %d and starting agent ID %d\n", Environment::tableID, Environment::agentID);
