@@ -43,6 +43,8 @@ public:
 	static bool ALLOW_SWAPS;		// NOT implemented yet
 	static bool SHOW_PARSE;
 
+	static bool ADVANCED_MODE;
+
 	// Boolean switches for debug
 	static const bool D_CONSTRUCTORS = false;
 	static const bool D_ENVIRONMENT = false;

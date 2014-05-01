@@ -54,6 +54,11 @@ void EnvironmentError()
 	printf ("ERROR: Environment not initialized.  Use 'start' first.\n");
 }
 
+void ModeError()
+{
+	printf ("ERROR: Wrong mode for command!  Use 'toggle mode' to switch.\n");
+}
+
 void DisplaySettings()
 {
 	printf ("Settings on generation:\n");
@@ -72,8 +77,12 @@ void DisplaySettings()
 	else printf ("FALSE\n");
 
 	printf ("Enable 1-for-1 Swaps: ");
-	if (bool Environment::ALLOW_SWAPS) printf ("TRUE\n");
+	if (Environment::ALLOW_SWAPS) printf ("TRUE\n");
 	else printf ("FALSE\n");
+
+	printf ("Advanced Mode: ");
+	if (Environment::ADVANCED_MODE) printf ("ENABLED\n");
+	else printf ("OFF\n");
 
 	// printf ("Default personality types: %d\n", Environment::personalityTypes);
 	printf ("Table capacity: %d\n\n", Environment::tableCapacity);
@@ -120,6 +129,16 @@ void AddAgent(list<string> commands) {
 	}
 }
 
+void AddAgentAdvanced() {
+	Environment::AddAgent();
+	printf ("New agent added without any links.\n");
+	if (Environment::tableID > 0 && Environment::agentID > 0 && !Environment::initialized)
+	{
+		Environment::initialized = true;
+		printf("The environment is now considered initialized.\n");
+	}
+}
+
 void AddTable(list<string> commands) {
 	string arg = PopReturnUpper(&commands);
 	int number = StrNum(arg);
@@ -153,6 +172,21 @@ void ToggleSettings(list<string> commands) {
 
 	else if (arg == "PARSE") {
 		Environment::SHOW_PARSE = !Environment::SHOW_PARSE;
+		DisplaySettings();
+	}
+
+	else if (arg == "MODE") {
+		if (Environment::ADVANCED_MODE)
+		{
+			ClearEnvironment();
+			Environment::ADVANCED_MODE = false;
+			printf ("Switching from ADVANCED to NORMAL operating mode.\n");
+		}
+		else {
+			ClearEnvironment();
+			Environment::ADVANCED_MODE = true;
+			printf ("Switching from NORMAL to ADVANCED operating mode.\n");
+		}
 		DisplaySettings();
 	}
 
@@ -215,7 +249,7 @@ void EditAgent(list<string> commands) {
 	int number = StrNum(arg);
 
 	if (number < 0 || number >= int(Environment::allAgents.size()))
-		printf ("ERROR!  Agent # entered is out of range.  Valid range is between 0 and %lu.\n", Environment::allAgents.size() - 1);
+		printf ("ERROR!  Agent # entered is out of range.  Valid range is between 0 and %u.\n", Environment::allAgents.size() - 1);
 	else {
 		a = Environment::allAgents.at(number);
 
@@ -239,7 +273,7 @@ void EditTable(list<string> commands) {
 	int number = StrNum(arg);
 
 	if (number < 0 || number >= int(Environment::allTables.size()))
-		printf ("ERROR!  Table # entered is out of range.  Valid range is between 0 and %lu.\n", Environment::allTables.size() - 1);
+		printf ("ERROR!  Table # entered is out of range.  Valid range is between 0 and %u.\n", Environment::allTables.size() - 1);
 	else {
 		t = Environment::allTables.at(number);
 
@@ -257,7 +291,7 @@ void EditTable(list<string> commands) {
 	}
 }
 
-void DisplayHelp() {
+void DisplayHelpNormal() {
 	printf ("Available commands: \n");
 	printf ("add agent #       - adds a new agent with personality #.\n");
 	printf ("add table #       - adds a new table with capacity #.\n");
@@ -286,8 +320,45 @@ void DisplayHelp() {
 	printf ("step agent #      - agent # will move to a better table if possible.\n");
 	printf ("swap # #          - swap two agents (only works if at separate tables)\n");
 	printf ("toggle autoseat   - unseated agents will try to find a random seat on 'step'\n");
+	printf ("toggle mode       - switch between NORMAL and ADVANCED modes.\n");
 	printf ("toggle parse      - shows parse details when loading environment file.\n");
 	printf ("toggle utilcalc   - detailed output for utility calculations.\n");
+	printf ("unseat #          - removes agent # from his table.\n");
+	printf ("unseat all        - removes all agents from tables.\n");
+}
+
+void DisplayHelpAdvanced() {
+	printf ("Available commands: \n");
+	printf ("add agent         - adds a new agent without any links.\n");
+	printf ("add table #       - adds a new table with capacity #.\n");
+	printf ("clear             - removes all agents and tables from the environment.\n");
+	printf ("display agent #   - displays info for a given agent.\n");
+	printf ("display agents    - displays info for all agents.\n");
+	printf ("display table #   - displays info for a given table.\n");
+	printf ("display tables    - displays info for all tables.\n");
+	printf ("dist # #          - displays the distance between agent # and #\n");
+	printf ("edit table # X    - changes capacity of table # to X.\n");
+	printf ("exit || quit      - ends the program.\n");
+	printf ("link # #          - links two agents together.\n");
+	printf ("load <filename>   - loads a particular filename as the environment.\n");
+	printf ("move # to #       - moves an agent to the specified table.\n");
+	printf ("recalc <#>        - recalculate utility for all agents or a specific one if named.\n");
+	printf ("reset             - same as 'start' - replaces existing environment.\n");
+	printf ("seat all          - seats all agents randomly at the tables.\n");
+	printf ("set agents #      - sets # of agents to spawn\n");
+	printf ("set capacity #    - sets table capacity on spawn\n");
+	printf ("set tables #      - sets # of tables to spawn\n");
+	printf ("social            - shows total utility of entire system.\n");
+	printf ("start             - creates tables and agents based on environment settings.\n");
+	printf ("step              - each agent sequentially sees if there is a better table.\n");
+	printf ("step #            - as 'step' but iterates # times.\n");
+	printf ("step agent #      - agent # will move to a better table if possible.\n");
+	printf ("swap # #          - swap two agents (only works if at separate tables)\n");
+	printf ("toggle autoseat   - unseated agents will try to find a random seat on 'step'\n");
+	printf ("toggle mode       - switch between NORMAL and ADVANCED modes.\n");
+	printf ("toggle parse      - shows parse details when loading environment file.\n");
+	printf ("toggle utilcalc   - detailed output for utility calculations.\n");
+	printf ("unlink # #        - unlinks two agents from each other.\n");
 	printf ("unseat #          - removes agent # from his table.\n");
 	printf ("unseat all        - removes all agents from tables.\n");
 }
@@ -432,6 +503,87 @@ void SeatAgent(list<string> commands, Agent* a) {
 
 			printf ("Agent %d has been moved to table %d\n", a->id, a->currentTable->id);
 		}
+	}
+}
+
+void LinkAgents(list<string> commands) {
+	string arg = PopReturnUpper(&commands);
+	int num = StrNum(arg);
+	Agent* origin;
+	Agent* target;
+
+	if (num < 0 || num >= Environment::agentID)
+	{
+		InterpretError();
+		return;
+	}
+	else origin = Environment::allAgents.at(num);
+
+	arg = PopReturnUpper(&commands);
+	num = StrNum(arg);
+
+	if (num < 0 || num >= Environment::agentID)
+	{
+		InterpretError();
+		return;
+	}
+	else target = Environment::allAgents.at(num);
+
+	printf ("Attempting to link agent %d to %d\n", origin->id, target->id);
+
+	origin->AddLink(target);
+}
+
+void UnlinkAgents(list<string> commands) {
+	string arg = PopReturnUpper(&commands);
+	int num = StrNum(arg);
+	Agent* origin;
+	Agent* target;
+
+	if (num < 0 || num >= Environment::agentID)
+	{
+		InterpretError();
+		return;
+	}
+	else origin = Environment::allAgents.at(num);
+
+	arg = PopReturnUpper(&commands);
+	num = StrNum(arg);
+
+	if (num < 0 || num >= Environment::agentID)
+	{
+		InterpretError();
+		return;
+	}
+	else target = Environment::allAgents.at(num);
+
+
+	printf ("Attempting to unlink agent %d from %d\n", origin->id, target->id);
+	origin->RemoveLink(target);
+}
+
+void Recalc(list<string> commands) {
+	if (commands.size() == 0)
+	{
+		printf ("Recalculating link distance between all agents.\n");
+
+		for (unsigned i = 0; i < Environment::allAgents.size(); i++) {
+			Agent* a = Environment::allAgents.at(i);
+			a->CalcLinks();
+		}
+	}
+	else {
+		string arg = PopReturnUpper(&commands);
+		int num = StrNum(arg);
+
+		if (num < 0 || num >= Environment::agentID) {
+			InterpretError();
+			return;
+		}
+
+		Agent* a = Environment::allAgents.at(num);
+
+		a->CalcLinks();
 	}
 }
 
@@ -623,6 +775,7 @@ int main()
 	Environment::initialized = false;
 	Environment::D_CALCUTIL = false;
 	Environment::SHOW_PARSE = false;
+	Environment::ADVANCED_MODE = true;
 
 	if (Environment::D_CONSTRUCTORS)
 		printf ("Environment initialized with starting table ID %d and starting agent ID %d\n", Environment::tableID, Environment::agentID);
@@ -682,10 +835,13 @@ int main()
 			InitializeEnvironment();
 		}
 
-		else if (arg == "ADD" && argc == 3) {
+		else if (arg == "ADD" && argc <= 3) {
 			arg = PopReturnUpper(&commands);
 
-			if (arg == "AGENT") AddAgent(commands);
+			if (arg == "AGENT") {
+				if (!Environment::ADVANCED_MODE) AddAgent(commands);
+				else AddAgentAdvanced();
+			}
 			else if (arg == "TABLE") AddTable(commands);
 			else InterpretError();
 		}
@@ -698,7 +854,7 @@ int main()
 			if (arg == "AGENTS") SetAgents(commands);
 			else if (arg == "CAPACITY") SetCapacity(commands);
 			else if (arg == "TABLES") SetTables(commands);
-			else if (arg == "LONER") SetLoner(commands);
+			else if (arg == "LONER" && !Environment::ADVANCED_MODE) SetLoner(commands);
 		}
 
 		else if (arg == "EDIT" && argc == 4) {
@@ -708,7 +864,11 @@ int main()
 			else if (arg == "TABLE") EditTable(commands);
 		}
 
-		else if (arg == "HELP") DisplayHelp();
+		else if (arg == "HELP")
+			{
+				if (Environment::ADVANCED_MODE) DisplayHelpAdvanced();
+				else DisplayHelpNormal();
+			}
 
 		else if (arg == "LOAD" && argc == 2) {
 			if (Environment::initialized) {
@@ -717,9 +877,24 @@ int main()
 				LoadEnvironment(commands);
 		}
 
+		else if (arg == "LINK" && argc == 3) {
+			if (Environment::ADVANCED_MODE) LinkAgents(commands);
+			else ModeError();
+		}
+
+		else if (arg == "UNLINK" && argc == 3) {
+			if (Environment::ADVANCED_MODE) UnlinkAgents(commands);
+			else ModeError();
+		}
+
 		// ------------------ All commands below require initialization
 		else if (!Environment::initialized)
 			EnvironmentError();
+
+		else if (arg == "RECALC" && argc <= 2) {
+			if (Environment::ADVANCED_MODE) Recalc(commands);
+			else ModeError();
+		}
 
 		else if (arg == "SEAT" && argc == 2) {
 			arg = PopReturnUpper(&commands);

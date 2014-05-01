@@ -6,16 +6,26 @@ class TableObj;
 #include <vector>
 #include "TableObj.h"
 
+class DistMapEntry {
+public:
+	DistMapEntry(Agent* a, int distance);
+
+	Agent* a;
+	int dist;
+};
+
 class Agent {
 public:
 	Agent();
 	Agent(int personality);
 
 	int id;								// Unique agent ID
-	//std::vector<Agent*> connections;	// Links to neighboring agents
+
+	std::vector<Agent*> neighbors;	// Links to neighboring agents
+	std::vector<DistMapEntry*> distMap;
+	//DistanceMap* distMap;
 
 	TableObj* currentTable;	// Where he is currently seated
-
 
 	// Will remove personality
 	int personality;	// Personality code - used to compute compatibility
@@ -37,8 +47,15 @@ public:
 
 	void SwapWith(Agent* a);		// Swaps places with agent a
 
+	void AddLink(Agent* a);
+	void RemoveLink(Agent* a);
+	void CalcLinks();
+	int CalcDistanceWith(Agent *target);
+
 private:
 	void DisplayAgentUtility();
+	void DisplayNeighbors();
+	static void RecursiveDist(std::vector<DistMapEntry*> stack, Agent* parent, Agent* target, int curLevel, int maxLevel);
 
 
 

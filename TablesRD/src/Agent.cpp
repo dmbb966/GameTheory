@@ -6,11 +6,29 @@
 
 using namespace std;
 
+
+DistMapEntry::DistMapEntry(Agent* a, int dist)
+{
+	this->a = a;
+	this->dist = dist;
+
+	if (Environment::D_CONSTRUCTORS)
+		printf ("Adding new DistanceMap Entry for agent ID %d at distance %d.\n",
+				this->a->id, this->dist);
+}
+
 Agent::Agent()
 {
 	this->id = Environment::NewAgentID();
-	this->personality = Environment::RandInt(Environment::personalityTypes);
 	this->currentTable = NULL;
+
+	if (Environment::ADVANCED_MODE) {
+		this->personality = 5;
+	}
+	else {
+		this->personality = Environment::RandInt(Environment::personalityTypes);
+	}
+
 
 	if (Environment::D_CONSTRUCTORS)
 		printf ("Adding new agent, ID %d and personality %d.\n",
@@ -32,6 +50,17 @@ Agent::Agent(int personality) {
 	if (Environment::D_CONSTRUCTORS)
 		printf ("Adding new agent, ID %d and personality %d.\n",
 		this->id, this->personality);
+}
+
+void Agent::DisplayNeighbors() {
+	if (this->neighbors.size() == 0)
+		printf ("No neighbors.");
+	else {
+		printf ("Neighbors with ");
+		for (unsigned i = 0; i < this->neighbors.size(); i++) {
+			printf ("%d ", this->neighbors.at(i)->id);
+		}
+	}
 }
 
 void Agent::SwapWith(Agent* a)
@@ -87,12 +116,19 @@ void Agent::SwapWith(Agent* a)
 
 void Agent::DisplayAgentInfo()
 {
-	printf ("Agent %d, Personality %d, is", this->id, this->personality);
+	if (!Environment::ADVANCED_MODE) {
+		printf ("Agent %d, Personality %d, is", this->id, this->personality);
+	}
+	else {
+		printf ("Agent %d.  ", this->id);
+		DisplayNeighbors();
+	}
+
 	if (this->currentTable == NULL)
-		printf (" unseated.  Utility is 0.\n");
+		printf (" Unseated.  Utility is 0.\n");
 	else
 	{
-		printf (" at table %d.  ", this->currentTable->id);
+		printf (" At table %d.  ", this->currentTable->id);
 		if (Environment::D_CALCUTIL)
 			printf ("\n");
 		this->DisplayAgentUtility();
@@ -284,3 +320,114 @@ void Agent::FindBetterTableNorm()
 	}
 }
 
+// Finds the distance between the parent and the target
+int Agent::CalcDistanceWith(Agent* target) {
+	Agent* origin = this;
+	int distance = 999;
+
+	// Checks all agents within distance map to see if entry already exists
+
+	printf ("Searching all neighbors within distance 3.\n");
+
+	for (unsigned i = 0; i < origin->distMap.size(); i++)
+	{
+		Agent* a = origin->distMap.at(i)->a;
+		if (a->id == target->id) {
+			printf ("Found target agent %d at distance %d\n", target->id, origin->distMap.at(i)->dist);
+			return origin->distMap.at(i)->dist;
+		}
+	}
+
+	printf ("Unable to find within distance 3.  Attempting backward search from target.\n");
+
+	// Failing this, uses the target's distance map and checks for a common connection.
+
+	for (unsigned i = 0; i < target->distMap.size(); i++)
+	{
+		DistMapEntry* dmA = target->distMap.at(i);
+		if (dmA->dist >= 3) continue;	// Redundant since 3 from origin and 2 from target connects
+
+		for (unsigned j = 0; j < origin->distMap.size(); j++){
+			DistMapEntry* dmB = origin->distMap.at(j);
+
+			if (dmA->a->id == dmB->a->id) {
+				int newDist = dmA->dist + dmB->dist;
+				printf ("Found target agent %d at distance %d.  Searching for shorter paths.\n", target->id, newDist);
+				if (newDist < distance) distance = newDist;
+				// Continues checking in case there is a closer neighbor
+			}
+		}
+	}
+
+	if (distance == 999) printf ("Did not find connection between agents %d and %d\n", origin->id, target->id);
+	else printf ("Connection found between agents %d and %d at range %d\n", origin->id, target->id, distance);
+	return distance;
+}
+
+void Agent::RecursiveDist(vector<DistMapEntry*> stack, Agent* parent, Agent* target, int curLevel, int maxLevel) {
+	if (curLevel > maxLevel) return;
+
+	printf ("%d -> %d, level %d of %d with %u neighbors\n", parent->id, target->id, curLevel, maxLevel, target->neighbors.size());
+
+	for (unsigned i = 0; i < target->neighbors.size(); i++) {
+		printf ("Begin %d of %d\n\n", i, target->neighbors.size());
+		if (target->neighbors.at(i)->id == parent->id) {
+			continue;
+		}
+		else {
+			printf (" ID %d: ", target->neighbors.at(i)->id);
+
+			DistMapEntry* d = new DistMapEntry(target->neighbors.at(i), curLevel);
+			printf ("  Dist %d.\n", curLevel);
+			stack.push_back(d);
+			curLevel++;
+			Agent::RecursiveDist(stack, target, target->neighbors.at(i), curLevel, maxLevel);
+			printf ("Done with recursive call.\n");
+		}
+	}
+}
+
+
+void Agent::CalcLinks() {
+	this->distMap.clear();
+	printf ("Old distance map cleared.  Recalculating links.\n");
+	Agent::RecursiveDist(this->distMap, this, this, 1, 3);
+}
+
+void Agent::AddLink(Agent* a) {
+	for (unsigned i = 0; i < this->neighbors.size(); i++) {
+		if (a->id == this->neighbors.at(i)->id) {
+			printf ("ERROR: Agent %d is already a neighbor of agent %d!\n", a->id, this->id);
+			return;
+		}
+
+		if (a->id == this->id) {
+			printf ("ERROR: You cannot link an agent to itself!\n");
+			return;
+		}
+	}
+
+	this->neighbors.push_back(a);
+	a->neighbors.push_back(this);
+	printf ("Added Agent %d as a neighbor to agent %d and vice versa.\n", a->id, this->id);
+}
+
+void Agent::RemoveLink(Agent* a) {
+	for (unsigned i = 0; i < this->neighbors.size(); i++) {
+		if (a->id == this->neighbors.at(i)->id) {
+			this->neighbors.erase(this->neighbors.begin()+i);
+
+			printf ("Removed link between Agent %d and Agent %d\n", this->id, a->id);
+			i = this->neighbors.size();
+		}
+	}
+
+	for (unsigned i = 0; i < a->neighbors.size(); i++) {
+		if (this->id == a->neighbors.at(i)->id) {
+			a->neighbors.erase(a->neighbors.begin()+i);
+
+			printf ("Removed link between Agent %d and Agent %d\n", a->id, this->id);
+			return;
+		}
+	}
+}
